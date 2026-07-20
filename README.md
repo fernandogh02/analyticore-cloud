@@ -25,3 +25,9 @@ AnalytiCore permite enviar textos para realizar un análisis simple de sentimien
 ## Estado
 
 Proyecto en desarrollo.
+
+## Documentación
+
+- [Arquitectura general](docs/architecture-overview.md)
+- [Contratos de las APIs](docs/api-contracts.md)
+- [Modelo de datos](docs/data-model.md)
