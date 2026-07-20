@@ -29,6 +29,12 @@ class Settings(BaseSettings):
         validation_alias="JAVA_SERVICE_URL",
     )
 
+    java_request_timeout_seconds: float = Field(
+        default=5.0,
+        validation_alias="JAVA_REQUEST_TIMEOUT_SECONDS",
+        gt=0,
+    )
+
     allowed_origins: str = Field(
         default="http://localhost:5173",
         validation_alias="ALLOWED_ORIGINS",

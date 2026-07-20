@@ -2,10 +2,18 @@
 
 from fastapi import FastAPI
 
+from app.presentation.exception_handlers import (
+    register_exception_handlers,
+)
 from app.presentation.routers.database_health import (
     router as database_health_router,
 )
-from app.presentation.routers.health import router as health_router
+from app.presentation.routers.health import (
+    router as health_router,
+)
+from app.presentation.routers.jobs import (
+    router as jobs_router,
+)
 
 app = FastAPI(
     title="AnalytiCore Python Service",
@@ -13,11 +21,14 @@ app = FastAPI(
         "Servicio responsable de recibir solicitudes, "
         "registrar trabajos y consultar sus resultados."
     ),
-    version="0.2.0",
+    version="0.3.0",
 )
+
+register_exception_handlers(app)
 
 app.include_router(health_router)
 app.include_router(database_health_router)
+app.include_router(jobs_router)
 
 
 @app.get(
@@ -31,6 +42,8 @@ def read_root() -> dict[str, str]:
     return {
         "service": "python-service",
         "application": "AnalytiCore",
-        "version": "0.2.0",
-        "message": "Servicio Python funcionando correctamente.",
+        "version": "0.3.0",
+        "message": (
+            "Servicio Python funcionando correctamente."
+        ),
     }

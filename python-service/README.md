@@ -26,3 +26,10 @@ La dirección se configura mediante:
 
 ```env
 DATABASE_URL=postgresql+psycopg://usuario:contraseña@localhost:5432/analyticore
+
+## API de trabajos
+
+### Registrar un análisis
+
+```http
+POST /api/jobs

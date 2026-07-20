@@ -27,4 +27,4 @@ def test_root_returns_application_information() -> None:
     assert response.status_code == 200
     assert response.json()["service"] == "python-service"
     assert response.json()["application"] == "AnalytiCore"
-    assert response.json()["version"] == "0.2.0"
+    assert response.json()["version"] == "0.3.0"
