@@ -17,3 +17,12 @@ Crear:
 
 ```powershell
 python -m venv .venv
+
+## PostgreSQL
+
+La conexión utiliza SQLAlchemy y Psycopg 3.
+
+La dirección se configura mediante:
+
+```env
+DATABASE_URL=postgresql+psycopg://usuario:contraseña@localhost:5432/analyticore
