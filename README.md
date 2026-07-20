@@ -31,3 +31,4 @@ Proyecto en desarrollo.
 - [Arquitectura general](docs/architecture-overview.md)
 - [Contratos de las APIs](docs/api-contracts.md)
 - [Modelo de datos](docs/data-model.md)
+- [Base de datos](database/README.md)
