@@ -454,3 +454,249 @@ textarea[aria-invalid="true"] {
     min-height: 210px;
   }
 }
+
+.status-chip--idle {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-chip--pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.status-chip--processing {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.status-chip--completed {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.status-chip--error {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.processing-card,
+.completed-card,
+.error-card {
+  min-height: 440px;
+}
+
+.processing-content {
+  display: flex;
+  min-height: 190px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.processing-content h3 {
+  margin: 18px 0 8px;
+  color: #101828;
+}
+
+.processing-content p {
+  max-width: 390px;
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.loading-spinner,
+.button-spinner {
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #e0e7ff;
+  border-top-color: #4f46e5;
+}
+
+.button-spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgb(255 255 255 / 42%);
+  border-top-color: #ffffff;
+}
+
+.result-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 0;
+  border-top: 1px solid #e8edf4;
+}
+
+.result-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.result-label {
+  display: block;
+  margin: 0;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sentiment-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.sentiment-badge--positive {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.sentiment-badge--negative {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.sentiment-badge--neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.keyword-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dfe4ff;
+  border-radius: 999px;
+  background: #f5f7ff;
+  color: #4338ca;
+  padding: 8px 11px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.empty-result {
+  margin: 0;
+  color: #667085;
+}
+
+.error-message {
+  display: flex;
+  gap: 13px;
+  margin: 28px 0;
+  border: 1px solid #fecdca;
+  border-radius: 14px;
+  background: #fef3f2;
+  color: #912018;
+  padding: 17px;
+}
+
+.error-message__icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  background: #d92d20;
+  color: #ffffff;
+  font-weight: 900;
+  place-items: center;
+}
+
+.error-message strong {
+  display: block;
+}
+
+.error-message p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+
+.demo-controls {
+  display: flex;
+  margin-top: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 62%);
+  padding: 20px;
+}
+
+.demo-controls h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 1rem;
+}
+
+.demo-controls__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.demo-button {
+  border: 1px solid #d7deea;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #526078;
+  cursor: pointer;
+  padding: 8px 11px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.demo-button:hover {
+  border-color: #818cf8;
+  color: #4338ca;
+}
+
+.demo-button--active {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 700px) {
+  .demo-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demo-controls__buttons {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner,
+  .button-spinner {
+    animation-duration: 1600ms;
+  }
+}

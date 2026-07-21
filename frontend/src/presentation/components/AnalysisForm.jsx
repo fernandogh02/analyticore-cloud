@@ -6,11 +6,17 @@ import {
 export function AnalysisForm({
   text,
   error,
+  isSubmitting,
   onTextChange,
   onSubmit,
 }) {
   const remainingCharacters = MAX_TEXT_LENGTH - text.length
-  const isSubmitDisabled = text.trim().length < MIN_TEXT_LENGTH
+
+  const isTextInvalid =
+    text.trim().length < MIN_TEXT_LENGTH
+
+  const isSubmitDisabled =
+    isTextInvalid || isSubmitting
 
   return (
     <form className="analysis-form" onSubmit={onSubmit}>
@@ -30,7 +36,9 @@ export function AnalysisForm({
 
       <div className="form-field">
         <div className="form-label-row">
-          <label htmlFor="analysis-text">Texto para analizar</label>
+          <label htmlFor="analysis-text">
+            Texto para analizar
+          </label>
 
           <span
             className={
@@ -56,15 +64,23 @@ export function AnalysisForm({
               : 'analysis-help'
           }
           aria-invalid={Boolean(error)}
-          onChange={(event) => onTextChange(event.target.value)}
+          disabled={isSubmitting}
+          onChange={(event) =>
+            onTextChange(event.target.value)
+          }
         />
 
         <p id="analysis-help" className="form-help">
-          Escribe entre {MIN_TEXT_LENGTH} y {MAX_TEXT_LENGTH} caracteres.
+          Escribe entre {MIN_TEXT_LENGTH} y{' '}
+          {MAX_TEXT_LENGTH} caracteres.
         </p>
 
         {error && (
-          <p id="analysis-error" className="form-error" role="alert">
+          <p
+            id="analysis-error"
+            className="form-error"
+            role="alert"
+          >
             {error}
           </p>
         )}
@@ -75,8 +91,20 @@ export function AnalysisForm({
         type="submit"
         disabled={isSubmitDisabled}
       >
-        <span aria-hidden="true">✦</span>
-        Preparar análisis
+        {isSubmitting ? (
+          <>
+            <span
+              className="button-spinner"
+              aria-hidden="true"
+            />
+            Analizando...
+          </>
+        ) : (
+          <>
+            <span aria-hidden="true">✦</span>
+            Analizar comentario
+          </>
+        )}
       </button>
     </form>
   )

@@ -1,9 +1,16 @@
 export const MIN_TEXT_LENGTH = 10
 export const MAX_TEXT_LENGTH = 2000
 
-export const JOB_STATUS = Object.freeze({
+export const UI_STATUS = Object.freeze({
+  IDLE: 'SIN_ENVIAR',
   PENDING: 'PENDIENTE',
   PROCESSING: 'PROCESANDO',
   COMPLETED: 'COMPLETADO',
   ERROR: 'ERROR',
+})
+
+export const SENTIMENT = Object.freeze({
+  POSITIVE: 'POSITIVO',
+  NEGATIVE: 'NEGATIVO',
+  NEUTRAL: 'NEUTRAL',
 })
