@@ -1,0 +1,9 @@
+export const MIN_TEXT_LENGTH = 10
+export const MAX_TEXT_LENGTH = 2000
+
+export const JOB_STATUS = Object.freeze({
+  PENDING: 'PENDIENTE',
+  PROCESSING: 'PROCESANDO',
+  COMPLETED: 'COMPLETADO',
+  ERROR: 'ERROR',
+})
