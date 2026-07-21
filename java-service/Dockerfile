@@ -56,6 +56,6 @@ HEALTHCHECK \
     --timeout=5s \
     --start-period=20s \
     --retries=3 \
-    CMD curl --fail --silent http://127.0.0.1:8080/health > /dev/null || exit 1
+    CMD curl --fail --silent "http://127.0.0.1:${PORT:-8080}/health" > /dev/null || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --server.port=${PORT:-8080}"]
