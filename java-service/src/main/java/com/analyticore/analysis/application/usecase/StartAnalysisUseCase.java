@@ -5,30 +5,34 @@ import com.analyticore.analysis.domain.exception.AnalysisJobNotFoundException;
 import com.analyticore.analysis.domain.exception.InvalidJobStateException;
 import com.analyticore.analysis.domain.model.AnalysisJobSnapshot;
 import com.analyticore.analysis.domain.model.JobStatus;
+import com.analyticore.analysis.domain.model.Sentiment;
+import com.analyticore.analysis.domain.model.SentimentAnalysisResult;
+import com.analyticore.analysis.domain.service.SentimentAnalyzer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 /**
- * Inicia el procesamiento de un trabajo.
+ * Inicia el procesamiento y analiza el sentimiento.
  */
 @Service
 public class StartAnalysisUseCase {
 
     private final AnalysisJobStatusPort jobStatusPort;
+    private final SentimentAnalyzer sentimentAnalyzer;
 
     public StartAnalysisUseCase(
-        AnalysisJobStatusPort jobStatusPort
+        AnalysisJobStatusPort jobStatusPort,
+        SentimentAnalyzer sentimentAnalyzer
     ) {
         this.jobStatusPort = jobStatusPort;
+        this.sentimentAnalyzer = sentimentAnalyzer;
     }
 
     /**
-     * Cambia un trabajo pendiente a procesamiento.
-     *
-     * Un trabajo que ya está en PROCESANDO se considera
-     * una solicitud repetida válida.
+     * Cambia el trabajo a PROCESANDO y calcula
+     * su sentimiento.
      *
      * @param jobId identificador recibido desde Python
      * @return estado resultante
@@ -43,25 +47,46 @@ public class StartAnalysisUseCase {
                 )
             );
 
-        if (job.status() == JobStatus.PROCESANDO) {
-            return new StartAnalysisResult(
-                jobId,
-                JobStatus.PROCESANDO
-            );
+        validateStatus(job);
+
+        if (job.status() == JobStatus.PENDIENTE) {
+            jobStatusPort.markAsProcessing(jobId);
         }
 
-        if (job.status() != JobStatus.PENDIENTE) {
-            throw new InvalidJobStateException(
+        Sentiment sentiment = job.sentiment();
+
+        if (sentiment == null) {
+            SentimentAnalysisResult analysis =
+                sentimentAnalyzer.analyze(
+                    job.textContent()
+                );
+
+            sentiment = analysis.sentiment();
+
+            jobStatusPort.saveSentiment(
                 jobId,
-                job.status()
+                sentiment
             );
         }
-
-        jobStatusPort.markAsProcessing(jobId);
 
         return new StartAnalysisResult(
             jobId,
             JobStatus.PROCESANDO
         );
+    }
+
+    private void validateStatus(
+        AnalysisJobSnapshot job
+    ) {
+        boolean allowed =
+            job.status() == JobStatus.PENDIENTE
+                || job.status() == JobStatus.PROCESANDO;
+
+        if (!allowed) {
+            throw new InvalidJobStateException(
+                job.id(),
+                job.status()
+            );
+        }
     }
 }

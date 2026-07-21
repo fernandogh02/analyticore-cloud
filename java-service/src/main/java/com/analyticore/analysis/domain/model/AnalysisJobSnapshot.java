@@ -3,14 +3,17 @@ package com.analyticore.analysis.domain.model;
 import java.util.UUID;
 
 /**
- * Información mínima de un trabajo necesaria
- * para iniciar su procesamiento.
+ * Información del trabajo requerida por los casos de uso.
  *
- * @param id identificador del trabajo
+ * @param id identificador
+ * @param textContent texto enviado por el usuario
  * @param status estado actual
+ * @param sentiment sentimiento guardado
  */
 public record AnalysisJobSnapshot(
     UUID id,
-    JobStatus status
+    String textContent,
+    JobStatus status,
+    Sentiment sentiment
 ) {
 }

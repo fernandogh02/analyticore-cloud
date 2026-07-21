@@ -14,7 +14,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Prueba real del cambio PENDIENTE a PROCESANDO.
+ * Prueba real del análisis de sentimiento.
  */
 @Tag("integration")
 @SpringBootTest
@@ -27,7 +27,7 @@ class StartAnalysisIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void changesStatusInPostgresql() {
+    void savesPositiveSentimentInPostgresql() {
         UUID jobId = UUID.randomUUID();
 
         try {
@@ -41,7 +41,7 @@ class StartAnalysisIntegrationTest {
                 VALUES (?, ?, ?)
                 """,
                 jobId,
-                "Prueba de endpoint Java.",
+                "La plataforma es excelente y fácil.",
                 "PENDIENTE"
             );
 
@@ -53,20 +53,33 @@ class StartAnalysisIntegrationTest {
                 result.status()
             );
 
-            String storedStatus =
+            StoredResult stored =
                 jdbcTemplate.queryForObject(
                     """
-                    SELECT status
+                    SELECT status, sentiment
                     FROM analysis_jobs
                     WHERE id = ?
                     """,
-                    String.class,
+                    (resultSet, rowNumber) ->
+                        new StoredResult(
+                            resultSet.getString(
+                                "status"
+                            ),
+                            resultSet.getString(
+                                "sentiment"
+                            )
+                        ),
                     jobId
                 );
 
             assertEquals(
                 "PROCESANDO",
-                storedStatus
+                stored.status()
+            );
+
+            assertEquals(
+                "POSITIVO",
+                stored.sentiment()
             );
         } finally {
             jdbcTemplate.update(
@@ -77,5 +90,11 @@ class StartAnalysisIntegrationTest {
                 jobId
             );
         }
+    }
+
+    private record StoredResult(
+        String status,
+        String sentiment
+    ) {
     }
 }

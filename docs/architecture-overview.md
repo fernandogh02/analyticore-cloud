@@ -209,3 +209,9 @@ El sistema se desplegará en Render mediante los siguientes recursos:
 * Una base de datos PostgreSQL gestionada.
 
 Cada aplicación tendrá su propia imagen Docker.
+
+### Análisis de sentimiento
+
+El servicio Java utiliza un componente de dominio llamado `SentimentAnalyzer`. Su implementación inicial es `RuleBasedSentimentAnalyzer`, que clasifica textos en español mediante vocabularios positivos y negativos, negaciones e intensificadores.
+
+El dominio no depende de Spring. La implementación se registra como dependencia mediante una clase de configuración ubicada en infraestructura.

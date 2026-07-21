@@ -124,4 +124,16 @@ public class AnalysisJobJpaEntity {
     this.keywords = new ArrayList<>();
     this.errorMessage = null;
 }
+
+/**
+ * Guarda el sentimiento calculado.
+ *
+ * @param calculatedSentiment resultado del análisis
+ */
+public void applySentiment(
+    Sentiment calculatedSentiment
+) {
+    this.sentiment = calculatedSentiment;
+}
+
 }

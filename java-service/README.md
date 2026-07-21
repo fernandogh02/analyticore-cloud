@@ -41,3 +41,25 @@ Ejemplo local:
 $env:DATABASE_URL="jdbc:postgresql://localhost:5432/analyticore"
 $env:DATABASE_USERNAME="analyticore_user"
 $env:DATABASE_PASSWORD="TU_CLAVE_LOCAL"
+
+## Análisis de sentimiento
+
+El servicio incorpora un analizador de sentimiento basado en reglas para textos en español.
+
+Clasificaciones posibles:
+
+- `POSITIVO`
+- `NEGATIVO`
+- `NEUTRAL`
+
+El algoritmo:
+
+1. Normaliza el texto.
+2. Elimina tildes y signos.
+3. Identifica palabras positivas y negativas.
+4. Interpreta negaciones.
+5. Aplica intensificadores.
+6. Calcula una puntuación.
+7. Guarda el sentimiento en PostgreSQL.
+
+En esta etapa, el trabajo permanece en estado `PROCESANDO`, ya que la extracción de palabras clave se implementa posteriormente.

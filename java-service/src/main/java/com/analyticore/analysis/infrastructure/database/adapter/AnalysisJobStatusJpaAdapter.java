@@ -3,6 +3,7 @@ package com.analyticore.analysis.infrastructure.database.adapter;
 import com.analyticore.analysis.application.port.out.AnalysisJobStatusPort;
 import com.analyticore.analysis.domain.exception.AnalysisJobNotFoundException;
 import com.analyticore.analysis.domain.model.AnalysisJobSnapshot;
+import com.analyticore.analysis.domain.model.Sentiment;
 import com.analyticore.analysis.infrastructure.database.entity.AnalysisJobJpaEntity;
 import com.analyticore.analysis.infrastructure.database.repository.AnalysisJobJpaRepository;
 import org.springframework.stereotype.Component;
@@ -33,22 +34,44 @@ public class AnalysisJobStatusJpaAdapter
             .findById(jobId)
             .map(entity -> new AnalysisJobSnapshot(
                 entity.getId(),
-                entity.getStatus()
+                entity.getTextContent(),
+                entity.getStatus(),
+                entity.getSentiment()
             ));
     }
 
     @Override
     public void markAsProcessing(UUID jobId) {
-        AnalysisJobJpaEntity entity = repository
+        AnalysisJobJpaEntity entity =
+            findEntity(jobId);
+
+        entity.startProcessing();
+
+        repository.saveAndFlush(entity);
+    }
+
+    @Override
+    public void saveSentiment(
+        UUID jobId,
+        Sentiment sentiment
+    ) {
+        AnalysisJobJpaEntity entity =
+            findEntity(jobId);
+
+        entity.applySentiment(sentiment);
+
+        repository.saveAndFlush(entity);
+    }
+
+    private AnalysisJobJpaEntity findEntity(
+        UUID jobId
+    ) {
+        return repository
             .findById(jobId)
             .orElseThrow(
                 () -> new AnalysisJobNotFoundException(
                     jobId
                 )
             );
-
-        entity.startProcessing();
-
-        repository.saveAndFlush(entity);
     }
 }
