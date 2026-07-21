@@ -221,3 +221,11 @@ El dominio no depende de Spring. La implementación se registra como dependencia
 La capa de dominio contiene el puerto `KeywordExtractor`. La implementación inicial, `RuleBasedKeywordExtractor`, utiliza normalización, eliminación de palabras comunes y frecuencia de aparición.
 
 El caso de uso `StartAnalysisUseCase` coordina el análisis de sentimiento y la extracción de palabras clave. El adaptador JPA persiste ambos resultados y cambia el trabajo a `COMPLETADO`.
+
+### Comunicación Python–Java
+
+El servicio Python crea el trabajo en PostgreSQL y envía el `jobId` al endpoint `POST /internal/analysis` del servicio Java.
+
+Java consulta el mismo registro, cambia su estado a `PROCESANDO`, ejecuta el análisis, guarda el sentimiento y las palabras clave, y finalmente cambia el estado a `COMPLETADO`.
+
+El frontend no se comunica directamente con Java. Consulta el resultado mediante el servicio Python utilizando `GET /api/jobs/{jobId}`.

@@ -32,3 +32,17 @@ Proyecto en desarrollo.
 - [Contratos de las APIs](docs/api-contracts.md)
 - [Modelo de datos](docs/data-model.md)
 - [Base de datos](database/README.md)
+
+## Ejecución local integrada
+
+AnalytiCore requiere PostgreSQL y dos servicios de backend.
+
+### 1. Servicio Java
+
+Desde `java-service`:
+
+```powershell
+$env:DATABASE_URL="jdbc:postgresql://localhost:5432/analyticore"
+$env:DATABASE_USERNAME="analyticore_user"
+$env:DATABASE_PASSWORD="TU_CLAVE_LOCAL"
+mvn spring-boot:run
