@@ -347,3 +347,16 @@ ERROR
 ```
 
 React también detendrá las consultas cuando el componente sea cerrado o cuando se supere el tiempo máximo establecido para esperar una respuesta.
+
+## Servicio Java
+
+### Iniciar análisis
+
+`POST /internal/analysis`
+
+Solicitud:
+
+```json
+{
+  "jobId": "UUID"
+}

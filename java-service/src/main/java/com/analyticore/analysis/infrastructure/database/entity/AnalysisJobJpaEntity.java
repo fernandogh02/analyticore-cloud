@@ -115,4 +115,13 @@ public class AnalysisJobJpaEntity {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
+    /**
+ * Cambia el trabajo a procesamiento.
+ */
+    public void startProcessing() {
+    this.status = JobStatus.PROCESANDO;
+    this.sentiment = null;
+    this.keywords = new ArrayList<>();
+    this.errorMessage = null;
+}
 }
