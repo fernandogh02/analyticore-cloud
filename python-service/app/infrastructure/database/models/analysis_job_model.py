@@ -1,14 +1,20 @@
 """Modelo SQLAlchemy correspondiente a la tabla analysis_jobs."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import DateTime, String, Text, func, text
+from sqlalchemy import DateTime, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base
+
+
+def utc_now() -> datetime:
+    """Devuelve la fecha y hora actual en UTC."""
+
+    return datetime.now(timezone.utc)
 
 
 class AnalysisJobModel(Base):
@@ -51,13 +57,14 @@ class AnalysisJobModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default=func.now(),
+        default=utc_now,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default=func.now(),
+        default=utc_now,
+        onupdate=utc_now,
     )
 
     def __repr__(self) -> str:

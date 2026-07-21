@@ -1,0 +1,85 @@
+name: analyticore
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - analyticore-network
+
+  java-service:
+    build:
+      context: ./java-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DATABASE_USERNAME: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - analyticore-network
+
+  python-service:
+    build:
+      context: ./python-service
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JAVA_SERVICE_URL: http://java-service:8080
+      JAVA_REQUEST_TIMEOUT_SECONDS: ${JAVA_REQUEST_TIMEOUT_SECONDS:-5}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      java-service:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - analyticore-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      python-service:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+    networks:
+      - analyticore-network
+
+volumes:
+  postgres_data:
+
+networks:
+  analyticore-network:
+    driver: bridge
