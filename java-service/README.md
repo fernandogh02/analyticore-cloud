@@ -23,3 +23,21 @@ Servicio encargado de realizar el análisis de sentimiento y la extracción de p
 
 ```powershell
 mvn clean compile
+
+## PostgreSQL
+
+El servicio utiliza la misma tabla `analysis_jobs` compartida con el servicio Python.
+
+Variables requeridas:
+
+- `DATABASE_URL`
+- `DATABASE_USERNAME`
+- `DATABASE_PASSWORD`
+- `DATABASE_POOL_SIZE`
+
+Ejemplo local:
+
+```powershell
+$env:DATABASE_URL="jdbc:postgresql://localhost:5432/analyticore"
+$env:DATABASE_USERNAME="analyticore_user"
+$env:DATABASE_PASSWORD="TU_CLAVE_LOCAL"
