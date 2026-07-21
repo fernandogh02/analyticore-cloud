@@ -1,6 +1,7 @@
 """Punto de entrada del servicio de submisión de AnalytiCore."""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.presentation.exception_handlers import (
     register_exception_handlers,
@@ -22,6 +23,23 @@ app = FastAPI(
         "registrar trabajos y consultar sus resultados."
     ),
     version="0.3.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=[
+        "GET",
+        "POST",
+        "OPTIONS",
+    ],
+    allow_headers=[
+        "Content-Type",
+    ],
 )
 
 register_exception_handlers(app)

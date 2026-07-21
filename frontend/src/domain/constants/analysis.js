@@ -1,6 +1,9 @@
 export const MIN_TEXT_LENGTH = 10
 export const MAX_TEXT_LENGTH = 2000
 
+export const POLLING_INTERVAL_MS = 1000
+export const MAX_POLLING_ATTEMPTS = 20
+
 export const UI_STATUS = Object.freeze({
   IDLE: 'SIN_ENVIAR',
   PENDING: 'PENDIENTE',
