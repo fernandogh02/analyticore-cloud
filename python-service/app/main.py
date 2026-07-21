@@ -1,5 +1,7 @@
 """Punto de entrada del servicio de submisión de AnalytiCore."""
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,6 +18,29 @@ from app.presentation.routers.jobs import (
     router as jobs_router,
 )
 
+
+def get_allowed_origins() -> list[str]:
+    """Obtiene los orígenes permitidos desde las variables de entorno."""
+
+    default_origins = (
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173"
+    )
+
+    configured_origins = os.getenv(
+        "ALLOWED_ORIGINS",
+        default_origins,
+    )
+
+    return [
+        origin.strip().rstrip("/")
+        for origin in configured_origins.split(",")
+        if origin.strip()
+    ]
+
+
+allowed_origins = get_allowed_origins()
+
 app = FastAPI(
     title="AnalytiCore Python Service",
     description=(
@@ -27,10 +52,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=[
         "GET",
