@@ -12,11 +12,15 @@ export function AnalysisForm({
 }) {
   const remainingCharacters = MAX_TEXT_LENGTH - text.length
 
+  const meaningfulCharacters =
+  text.match(/[\p{L}\p{N}]/gu) ?? []
+
   const isTextInvalid =
-    text.trim().length < MIN_TEXT_LENGTH
+  text.trim().length < MIN_TEXT_LENGTH ||
+  meaningfulCharacters.length < 3
 
   const isSubmitDisabled =
-    isTextInvalid || isSubmitting
+  isTextInvalid || isSubmitting
 
   return (
     <form className="analysis-form" onSubmit={onSubmit}>

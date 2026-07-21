@@ -1,8 +1,14 @@
 """Esquemas HTTP de los trabajos de análisis."""
 
+import re
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+)
 
 from app.domain.enums import JobStatus, Sentiment
 
@@ -15,24 +21,59 @@ class CreateJobRequest(BaseModel):
     )
 
     text: str = Field(
-        min_length=1,
-        max_length=5000,
+        min_length=10,
+        max_length=2000,
         description="Texto que se desea analizar",
         examples=[
             "La plataforma funciona muy bien."
         ],
     )
 
-    @field_validator("text")
+    @field_validator(
+        "text",
+        mode="before",
+    )
     @classmethod
-    def validate_text(cls, value: str) -> str:
-        """Rechaza textos formados solamente por espacios."""
+    def validate_text(
+        cls,
+        value: object,
+    ) -> object:
+        """Normaliza y valida el comentario recibido."""
 
-        normalized_text = value.strip()
+        if not isinstance(value, str):
+            return value
+
+        normalized_text = " ".join(
+            value.split()
+        )
 
         if not normalized_text:
             raise ValueError(
                 "Debe ingresar un texto válido."
+            )
+
+        if len(normalized_text) < 10:
+            raise ValueError(
+                "El texto debe contener al menos "
+                "10 caracteres."
+            )
+
+        if len(normalized_text) > 2000:
+            raise ValueError(
+                "El texto no puede superar "
+                "2000 caracteres."
+            )
+
+        meaningful_characters = re.findall(
+            r"[^\W_]",
+            normalized_text,
+            flags=re.UNICODE,
+        )
+
+        if len(meaningful_characters) < 3:
+            raise ValueError(
+                "El texto debe contener al menos "
+                "tres letras o números."
             )
 
         return normalized_text

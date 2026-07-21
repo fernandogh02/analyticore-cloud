@@ -6,10 +6,11 @@ import {
 
 import { analyzeComment } from '../../application/analyzeComment'
 import {
-  MAX_TEXT_LENGTH,
-  MIN_TEXT_LENGTH,
   UI_STATUS,
 } from '../../domain/constants/analysis'
+import {
+  validateAnalysisText,
+} from '../../domain/validation/validateAnalysisText'
 import { AnalysisForm } from '../components/AnalysisForm'
 import { AnalysisPreview } from '../components/AnalysisPreview'
 import { AppHeader } from '../components/AppHeader'
@@ -44,7 +45,14 @@ export function AnalysisPage() {
     setText(newText)
 
     if (error) {
-      setError('')
+      const validation =
+        validateAnalysisText(newText)
+
+      setError(
+        validation.isValid
+          ? ''
+          : validation.error,
+      )
     }
   }
 
@@ -71,27 +79,20 @@ export function AnalysisPage() {
   async function handleSubmit(event) {
     event.preventDefault()
 
-    const normalizedText = text.trim()
-
-    if (
-      normalizedText.length <
-      MIN_TEXT_LENGTH
-    ) {
-      setError(
-        `El texto debe contener al menos ${MIN_TEXT_LENGTH} caracteres.`,
-      )
+    if (isSubmitting) {
       return
     }
 
-    if (
-      normalizedText.length >
-      MAX_TEXT_LENGTH
-    ) {
-      setError(
-        `El texto no puede superar ${MAX_TEXT_LENGTH} caracteres.`,
-      )
+    const validation =
+      validateAnalysisText(text)
+
+    if (!validation.isValid) {
+      setError(validation.error)
       return
     }
+
+    const normalizedText =
+      validation.normalizedText
 
     requestControllerRef.current?.abort()
 
@@ -101,6 +102,7 @@ export function AnalysisPage() {
     requestControllerRef.current =
       controller
 
+    setText(normalizedText)
     setSubmittedText(normalizedText)
     setStatus(UI_STATUS.PENDING)
     setSentiment(null)
