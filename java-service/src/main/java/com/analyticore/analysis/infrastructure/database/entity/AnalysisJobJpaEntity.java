@@ -136,4 +136,23 @@ public void applySentiment(
     this.sentiment = calculatedSentiment;
 }
 
+/**
+ * Guarda el resultado completo del análisis.
+ *
+ * @param calculatedSentiment sentimiento calculado
+ * @param extractedKeywords palabras clave extraídas
+ */
+public void completeAnalysis(
+    Sentiment calculatedSentiment,
+    List<String> extractedKeywords
+) {
+    this.sentiment = calculatedSentiment;
+    this.keywords = new ArrayList<>(
+        extractedKeywords
+    );
+    this.status = JobStatus.COMPLETADO;
+    this.errorMessage = null;
+}
+
+
 }

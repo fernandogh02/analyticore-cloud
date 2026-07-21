@@ -3,6 +3,7 @@ package com.analyticore.analysis.application.port.out;
 import com.analyticore.analysis.domain.model.AnalysisJobSnapshot;
 import com.analyticore.analysis.domain.model.Sentiment;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,8 +17,16 @@ public interface AnalysisJobStatusPort {
 
     void markAsProcessing(UUID jobId);
 
-    void saveSentiment(
+    /**
+     * Guarda todos los resultados y termina el trabajo.
+     *
+     * @param jobId identificador
+     * @param sentiment sentimiento obtenido
+     * @param keywords palabras clave
+     */
+    void completeAnalysis(
         UUID jobId,
-        Sentiment sentiment
+        Sentiment sentiment,
+        List<String> keywords
     );
 }

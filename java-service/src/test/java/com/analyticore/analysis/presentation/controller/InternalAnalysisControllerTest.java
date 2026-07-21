@@ -54,7 +54,7 @@ class InternalAnalysisControllerTest {
             .thenReturn(
                 new StartAnalysisResult(
                     jobId,
-                    JobStatus.PROCESANDO
+                    JobStatus.COMPLETADO
                 )
             );
 
@@ -78,7 +78,7 @@ class InternalAnalysisControllerTest {
             )
             .andExpect(
                 jsonPath("$.status")
-                    .value("PROCESANDO")
+                    .value("COMPLETADO")
             );
     }
 

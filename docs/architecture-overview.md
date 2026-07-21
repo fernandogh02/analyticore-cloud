@@ -215,3 +215,9 @@ Cada aplicación tendrá su propia imagen Docker.
 El servicio Java utiliza un componente de dominio llamado `SentimentAnalyzer`. Su implementación inicial es `RuleBasedSentimentAnalyzer`, que clasifica textos en español mediante vocabularios positivos y negativos, negaciones e intensificadores.
 
 El dominio no depende de Spring. La implementación se registra como dependencia mediante una clase de configuración ubicada en infraestructura.
+
+### Extracción de palabras clave
+
+La capa de dominio contiene el puerto `KeywordExtractor`. La implementación inicial, `RuleBasedKeywordExtractor`, utiliza normalización, eliminación de palabras comunes y frecuencia de aparición.
+
+El caso de uso `StartAnalysisUseCase` coordina el análisis de sentimiento y la extracción de palabras clave. El adaptador JPA persiste ambos resultados y cambia el trabajo a `COMPLETADO`.

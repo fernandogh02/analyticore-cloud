@@ -47,7 +47,7 @@ public class InternalAnalysisController {
             new StartAnalysisResponse(
                 result.jobId(),
                 result.status(),
-                "El trabajo fue aceptado para análisis."
+                "El análisis fue completado correctamente."
             );
 
         return ResponseEntity

@@ -8,6 +8,7 @@ import com.analyticore.analysis.infrastructure.database.entity.AnalysisJobJpaEnt
 import com.analyticore.analysis.infrastructure.database.repository.AnalysisJobJpaRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,14 +52,18 @@ public class AnalysisJobStatusJpaAdapter
     }
 
     @Override
-    public void saveSentiment(
+    public void completeAnalysis(
         UUID jobId,
-        Sentiment sentiment
+        Sentiment sentiment,
+        List<String> keywords
     ) {
         AnalysisJobJpaEntity entity =
             findEntity(jobId);
 
-        entity.applySentiment(sentiment);
+        entity.completeAnalysis(
+            sentiment,
+            keywords
+        );
 
         repository.saveAndFlush(entity);
     }

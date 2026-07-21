@@ -7,6 +7,7 @@ import com.analyticore.analysis.domain.model.AnalysisJobSnapshot;
 import com.analyticore.analysis.domain.model.JobStatus;
 import com.analyticore.analysis.domain.model.Sentiment;
 import com.analyticore.analysis.domain.model.SentimentAnalysisResult;
+import com.analyticore.analysis.domain.service.KeywordExtractor;
 import com.analyticore.analysis.domain.service.SentimentAnalyzer;
 import org.junit.jupiter.api.Test;
 
@@ -18,12 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Pruebas del inicio y análisis de sentimiento.
+ * Pruebas del análisis completo.
  */
 class StartAnalysisUseCaseTest {
 
     @Test
-    void changesPendingJobAndSavesSentiment() {
+    void completesPendingJob() {
         UUID jobId = UUID.randomUUID();
 
         FakeAnalysisJobStatusPort port =
@@ -37,10 +38,12 @@ class StartAnalysisUseCaseTest {
             );
 
         StartAnalysisUseCase useCase =
-            new StartAnalysisUseCase(
+            createUseCase(
                 port,
-                new FakeSentimentAnalyzer(
-                    Sentiment.POSITIVO
+                Sentiment.POSITIVO,
+                List.of(
+                    "plataforma",
+                    "excelente"
                 )
             );
 
@@ -48,12 +51,12 @@ class StartAnalysisUseCaseTest {
             useCase.execute(jobId);
 
         assertEquals(
-            JobStatus.PROCESANDO,
+            JobStatus.COMPLETADO,
             result.status()
         );
 
         assertEquals(
-            JobStatus.PROCESANDO,
+            JobStatus.COMPLETADO,
             port.currentStatus
         );
 
@@ -61,27 +64,37 @@ class StartAnalysisUseCaseTest {
             Sentiment.POSITIVO,
             port.savedSentiment
         );
+
+        assertEquals(
+            List.of(
+                "plataforma",
+                "excelente"
+            ),
+            port.savedKeywords
+        );
     }
 
     @Test
-    void doesNotRecalculateExistingSentiment() {
+    void completesProcessingJob() {
         UUID jobId = UUID.randomUUID();
 
         FakeAnalysisJobStatusPort port =
             new FakeAnalysisJobStatusPort(
                 new AnalysisJobSnapshot(
                     jobId,
-                    "Texto previamente analizado.",
+                    "Texto que ya estaba procesándose.",
                     JobStatus.PROCESANDO,
                     Sentiment.NEUTRAL
                 )
             );
 
         StartAnalysisUseCase useCase =
-            new StartAnalysisUseCase(
+            createUseCase(
                 port,
-                new FakeSentimentAnalyzer(
-                    Sentiment.POSITIVO
+                Sentiment.POSITIVO,
+                List.of(
+                    "texto",
+                    "procesandose"
                 )
             );
 
@@ -89,7 +102,7 @@ class StartAnalysisUseCaseTest {
             useCase.execute(jobId);
 
         assertEquals(
-            JobStatus.PROCESANDO,
+            JobStatus.COMPLETADO,
             result.status()
         );
 
@@ -114,11 +127,10 @@ class StartAnalysisUseCaseTest {
             );
 
         StartAnalysisUseCase useCase =
-            new StartAnalysisUseCase(
+            createUseCase(
                 port,
-                new FakeSentimentAnalyzer(
-                    Sentiment.POSITIVO
-                )
+                Sentiment.POSITIVO,
+                List.of("texto")
             );
 
         assertThrows(
@@ -135,16 +147,37 @@ class StartAnalysisUseCaseTest {
             new FakeAnalysisJobStatusPort(null);
 
         StartAnalysisUseCase useCase =
-            new StartAnalysisUseCase(
+            createUseCase(
                 port,
-                new FakeSentimentAnalyzer(
-                    Sentiment.NEUTRAL
-                )
+                Sentiment.NEUTRAL,
+                List.of()
             );
 
         assertThrows(
             AnalysisJobNotFoundException.class,
             () -> useCase.execute(jobId)
+        );
+    }
+
+    private StartAnalysisUseCase createUseCase(
+        FakeAnalysisJobStatusPort port,
+        Sentiment sentiment,
+        List<String> keywords
+    ) {
+        SentimentAnalyzer sentimentAnalyzer =
+            text -> new SentimentAnalysisResult(
+                sentiment,
+                1,
+                List.of("prueba")
+            );
+
+        KeywordExtractor keywordExtractor =
+            text -> keywords;
+
+        return new StartAnalysisUseCase(
+            port,
+            sentimentAnalyzer,
+            keywordExtractor
         );
     }
 
@@ -154,6 +187,8 @@ class StartAnalysisUseCaseTest {
         private final AnalysisJobSnapshot job;
         private JobStatus currentStatus;
         private Sentiment savedSentiment;
+        private List<String> savedKeywords =
+            List.of();
 
         FakeAnalysisJobStatusPort(
             AnalysisJobSnapshot job
@@ -179,27 +214,14 @@ class StartAnalysisUseCaseTest {
         }
 
         @Override
-        public void saveSentiment(
+        public void completeAnalysis(
             UUID jobId,
-            Sentiment sentiment
+            Sentiment sentiment,
+            List<String> keywords
         ) {
+            currentStatus = JobStatus.COMPLETADO;
             savedSentiment = sentiment;
-        }
-    }
-
-    private record FakeSentimentAnalyzer(
-        Sentiment result
-    ) implements SentimentAnalyzer {
-
-        @Override
-        public SentimentAnalysisResult analyze(
-            String text
-        ) {
-            return new SentimentAnalysisResult(
-                result,
-                1,
-                List.of("prueba")
-            );
+            savedKeywords = List.copyOf(keywords);
         }
     }
 }

@@ -12,9 +12,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Prueba real del análisis de sentimiento.
+ * Prueba real del análisis completo.
  */
 @Tag("integration")
 @SpringBootTest
@@ -27,7 +28,7 @@ class StartAnalysisIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void savesPositiveSentimentInPostgresql() {
+    void completesAnalysisInPostgresql() {
         UUID jobId = UUID.randomUUID();
 
         try {
@@ -41,7 +42,11 @@ class StartAnalysisIntegrationTest {
                 VALUES (?, ?, ?)
                 """,
                 jobId,
-                "La plataforma es excelente y fácil.",
+                """
+                La plataforma es excelente.
+                La plataforma analiza comentarios
+                de clientes rápidamente.
+                """,
                 "PENDIENTE"
             );
 
@@ -49,14 +54,17 @@ class StartAnalysisIntegrationTest {
                 useCase.execute(jobId);
 
             assertEquals(
-                JobStatus.PROCESANDO,
+                JobStatus.COMPLETADO,
                 result.status()
             );
 
             StoredResult stored =
                 jdbcTemplate.queryForObject(
                     """
-                    SELECT status, sentiment
+                    SELECT
+                        status,
+                        sentiment,
+                        keywords::text AS keywords
                     FROM analysis_jobs
                     WHERE id = ?
                     """,
@@ -67,19 +75,34 @@ class StartAnalysisIntegrationTest {
                             ),
                             resultSet.getString(
                                 "sentiment"
+                            ),
+                            resultSet.getString(
+                                "keywords"
                             )
                         ),
                     jobId
                 );
 
             assertEquals(
-                "PROCESANDO",
+                "COMPLETADO",
                 stored.status()
             );
 
             assertEquals(
                 "POSITIVO",
                 stored.sentiment()
+            );
+
+            assertTrue(
+                stored.keywords().contains(
+                    "plataforma"
+                )
+            );
+
+            assertTrue(
+                stored.keywords().contains(
+                    "comentarios"
+                )
             );
         } finally {
             jdbcTemplate.update(
@@ -94,7 +117,8 @@ class StartAnalysisIntegrationTest {
 
     private record StoredResult(
         String status,
-        String sentiment
+        String sentiment,
+        String keywords
     ) {
     }
 }

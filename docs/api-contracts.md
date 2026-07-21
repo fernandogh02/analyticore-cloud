@@ -350,7 +350,7 @@ React también detendrá las consultas cuando el componente sea cerrado o cuando
 
 ## Servicio Java
 
-### Iniciar análisis
+### Iniciar y completar análisis
 
 `POST /internal/analysis`
 

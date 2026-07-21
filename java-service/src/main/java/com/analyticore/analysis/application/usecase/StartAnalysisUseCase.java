@@ -7,35 +7,40 @@ import com.analyticore.analysis.domain.model.AnalysisJobSnapshot;
 import com.analyticore.analysis.domain.model.JobStatus;
 import com.analyticore.analysis.domain.model.Sentiment;
 import com.analyticore.analysis.domain.model.SentimentAnalysisResult;
+import com.analyticore.analysis.domain.service.KeywordExtractor;
 import com.analyticore.analysis.domain.service.SentimentAnalyzer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Inicia el procesamiento y analiza el sentimiento.
+ * Ejecuta el análisis completo de un trabajo.
  */
 @Service
 public class StartAnalysisUseCase {
 
     private final AnalysisJobStatusPort jobStatusPort;
     private final SentimentAnalyzer sentimentAnalyzer;
+    private final KeywordExtractor keywordExtractor;
 
     public StartAnalysisUseCase(
         AnalysisJobStatusPort jobStatusPort,
-        SentimentAnalyzer sentimentAnalyzer
+        SentimentAnalyzer sentimentAnalyzer,
+        KeywordExtractor keywordExtractor
     ) {
         this.jobStatusPort = jobStatusPort;
         this.sentimentAnalyzer = sentimentAnalyzer;
+        this.keywordExtractor = keywordExtractor;
     }
 
     /**
-     * Cambia el trabajo a PROCESANDO y calcula
-     * su sentimiento.
+     * Analiza sentimiento, extrae palabras clave
+     * y completa el trabajo.
      *
      * @param jobId identificador recibido desde Python
-     * @return estado resultante
+     * @return estado final
      */
     @Transactional
     public StartAnalysisResult execute(UUID jobId) {
@@ -53,26 +58,39 @@ public class StartAnalysisUseCase {
             jobStatusPort.markAsProcessing(jobId);
         }
 
-        Sentiment sentiment = job.sentiment();
+        Sentiment sentiment =
+            determineSentiment(job);
 
-        if (sentiment == null) {
-            SentimentAnalysisResult analysis =
-                sentimentAnalyzer.analyze(
-                    job.textContent()
-                );
-
-            sentiment = analysis.sentiment();
-
-            jobStatusPort.saveSentiment(
-                jobId,
-                sentiment
+        List<String> keywords =
+            keywordExtractor.extract(
+                job.textContent()
             );
-        }
+
+        jobStatusPort.completeAnalysis(
+            jobId,
+            sentiment,
+            keywords
+        );
 
         return new StartAnalysisResult(
             jobId,
-            JobStatus.PROCESANDO
+            JobStatus.COMPLETADO
         );
+    }
+
+    private Sentiment determineSentiment(
+        AnalysisJobSnapshot job
+    ) {
+        if (job.sentiment() != null) {
+            return job.sentiment();
+        }
+
+        SentimentAnalysisResult result =
+            sentimentAnalyzer.analyze(
+                job.textContent()
+            );
+
+        return result.sentiment();
     }
 
     private void validateStatus(
