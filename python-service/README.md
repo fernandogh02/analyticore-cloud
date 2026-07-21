@@ -33,3 +33,10 @@ DATABASE_URL=postgresql+psycopg://usuario:contraseña@localhost:5432/analyticore
 
 ```http
 POST /api/jobs
+
+## Validación del servicio
+
+Ejecutar pruebas normales:
+
+```powershell
+python -m pytest -q -m "not integration"
