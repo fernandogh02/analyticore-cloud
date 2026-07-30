@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Prueba real del análisis completo.
+ * Prueba real del análisis completo con PostgreSQL.
  */
 @Tag("integration")
 @SpringBootTest
@@ -37,9 +37,19 @@ class StartAnalysisIntegrationTest {
                 INSERT INTO analysis_jobs (
                     id,
                     text_content,
-                    status
+                    status,
+                    keywords,
+                    created_at,
+                    updated_at
                 )
-                VALUES (?, ?, ?)
+                VALUES (
+                    ?,
+                    ?,
+                    ?,
+                    CAST('[]' AS jsonb),
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                )
                 """,
                 jobId,
                 """
