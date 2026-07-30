@@ -12,8 +12,8 @@ from app.presentation.dependencies import (
     get_analysis_service_client,
 )
 from tests.fakes import (
-    FakeAnalysisServiceClient,
     FailingAnalysisServiceClient,
+    FakeAnalysisServiceClient,
     InMemoryAnalysisJobRepository,
 )
 
