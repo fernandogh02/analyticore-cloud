@@ -220,3 +220,244 @@ jobs:
         run: |
           docker push "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
           docker push "${REGISTRY}/${IMAGE_NAME}:staging"
+
+  deploy-staging:
+    name: Desplegar y verificar Python en staging
+    runs-on: ubuntu-latest
+    needs: docker-build-scan-and-publish
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Validar configuración de staging
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_PYTHON_STAGING_DEPLOY_HOOK }}
+          PYTHON_URL: ${{ vars.PYTHON_STAGING_URL }}
+          JAVA_URL: ${{ vars.JAVA_STAGING_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::No está configurado RENDER_PYTHON_STAGING_DEPLOY_HOOK."
+            exit 1
+          fi
+
+          if [ -z "$PYTHON_URL" ]; then
+            echo "::error::No está configurado PYTHON_STAGING_URL."
+            exit 1
+          fi
+
+          if [ -z "$JAVA_URL" ]; then
+            echo "::error::No está configurado JAVA_STAGING_URL."
+            exit 1
+          fi
+
+          echo "Configuración de Python staging disponible."
+
+      - name: Solicitar despliegue en Render
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_PYTHON_STAGING_DEPLOY_HOOK }}
+        run: |
+          separator="?"
+
+          if [[ "$DEPLOY_HOOK" == *"?"* ]]; then
+            separator="&"
+          fi
+
+          curl \
+            --fail \
+            --show-error \
+            --silent \
+            --request POST \
+            "${DEPLOY_HOOK}${separator}ref=${GITHUB_SHA}"
+
+          echo
+          echo "Render aceptó el despliegue del commit ${GITHUB_SHA}."
+
+      - name: Esperar inicio del despliegue
+        run: sleep 60
+
+      - name: Verificar salud de Python staging
+        shell: bash
+        env:
+          PYTHON_URL: ${{ vars.PYTHON_STAGING_URL }}
+        run: |
+          for attempt in {1..30}; do
+            echo "Verificación $attempt de 30 para Python."
+
+            status_code="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/python-health.json \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "${PYTHON_URL}/health" || true
+            )"
+
+            if [ "$status_code" = "200" ]; then
+              echo "Python staging disponible con HTTP 200."
+              cat /tmp/python-health.json
+              echo
+              exit 0
+            fi
+
+            echo "Respuesta actual: HTTP ${status_code:-sin respuesta}."
+            sleep 15
+          done
+
+          echo "::error::Python staging no respondió correctamente."
+          exit 1
+
+      - name: Verificar conexión de Python con PostgreSQL
+        shell: bash
+        env:
+          PYTHON_URL: ${{ vars.PYTHON_STAGING_URL }}
+        run: |
+          for attempt in {1..20}; do
+            echo "Verificación $attempt de 20 para PostgreSQL."
+
+            status_code="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/database-health.json \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "${PYTHON_URL}/health/database" || true
+            )"
+
+            if [ "$status_code" = "200" ]; then
+              echo "Python se conectó correctamente con PostgreSQL staging."
+              cat /tmp/database-health.json
+              echo
+              exit 0
+            fi
+
+            echo "Respuesta actual: HTTP ${status_code:-sin respuesta}."
+            sleep 15
+          done
+
+          echo "::error::La conexión de Python con PostgreSQL staging falló."
+          exit 1
+
+      - name: Activar y verificar Java staging
+        shell: bash
+        env:
+          JAVA_URL: ${{ vars.JAVA_STAGING_URL }}
+        run: |
+          for attempt in {1..30}; do
+            echo "Verificación $attempt de 30 para Java."
+
+            status_code="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/java-health.json \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "${JAVA_URL}/health" || true
+            )"
+
+            if [ "$status_code" = "200" ]; then
+              echo "Java staging disponible con HTTP 200."
+              cat /tmp/java-health.json
+              echo
+              exit 0
+            fi
+
+            echo "Respuesta actual: HTTP ${status_code:-sin respuesta}."
+            sleep 15
+          done
+
+          echo "::error::Java staging no respondió correctamente."
+          exit 1
+
+      - name: Probar flujo completo de análisis
+        shell: bash
+        env:
+          PYTHON_URL: ${{ vars.PYTHON_STAGING_URL }}
+        run: |
+          test_text="Prueba automática staging ${GITHUB_SHA}"
+
+          create_status="$(
+            curl \
+              --location \
+              --silent \
+              --show-error \
+              --output /tmp/job-created.json \
+              --write-out "%{http_code}" \
+              --max-time 120 \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --data "$(jq -nc --arg text "$test_text" '{text: $text}')" \
+              "${PYTHON_URL}/api/jobs" || true
+          )"
+
+          echo "Respuesta de creación: HTTP ${create_status:-sin respuesta}."
+          cat /tmp/job-created.json 2>/dev/null || true
+          echo
+
+          case "$create_status" in
+            200|201|202)
+              ;;
+            *)
+              echo "::error::No fue posible crear el trabajo de análisis."
+              exit 1
+              ;;
+          esac
+
+          job_id="$(
+            jq -r \
+              '.id // .jobId // .job_id // empty' \
+              /tmp/job-created.json
+          )"
+
+          if [ -z "$job_id" ]; then
+            echo "::error::La respuesta no contiene el identificador del trabajo."
+            exit 1
+          fi
+
+          echo "Trabajo creado correctamente: $job_id"
+
+          for attempt in {1..20}; do
+            echo "Consulta $attempt de 20 para el trabajo $job_id."
+
+            get_status="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/job-result.json \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "${PYTHON_URL}/api/jobs/${job_id}" || true
+            )"
+
+            if [ "$get_status" = "200" ]; then
+              job_status="$(
+                jq -r \
+                  '.status // .state // empty' \
+                  /tmp/job-result.json |
+                  tr '[:lower:]' '[:upper:]'
+              )"
+
+              echo "Estado actual: ${job_status:-sin estado}."
+              cat /tmp/job-result.json
+              echo
+
+              if [ "$job_status" = "COMPLETADO" ] ||
+                 [ "$job_status" = "COMPLETED" ]; then
+                echo "Flujo Python, Java y PostgreSQL staging completado."
+                exit 0
+              fi
+            else
+              echo "Consulta actual: HTTP ${get_status:-sin respuesta}."
+            fi
+
+            sleep 10
+          done
+
+          echo "::error::El trabajo no llegó al estado completado."
+          exit 1
