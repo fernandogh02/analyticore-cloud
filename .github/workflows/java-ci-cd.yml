@@ -1,0 +1,140 @@
+﻿name: Java CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "java-service/**"
+      - "database/init.sql"
+      - ".github/workflows/java-ci-cd.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "java-service/**"
+      - "database/init.sql"
+      - ".github/workflows/java-ci-cd.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: java-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-security-and-unit-tests:
+    name: Calidad, seguridad y pruebas unitarias Java
+    runs-on: ubuntu-latest
+
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+    defaults:
+      run:
+        working-directory: java-service
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: java-service/pom.xml
+
+      - name: Ejecutar pruebas unitarias
+        run: mvn -B clean test -Dtest='!*IntegrationTest'
+
+      - name: Ejecutar SpotBugs
+        run: mvn -B spotbugs:check
+
+      - name: Analizar vulnerabilidades
+        run: |
+          if [ -n "$NVD_API_KEY" ]; then
+            mvn -B dependency-check:check \
+              -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+          else
+            echo "NVD_API_KEY no configurada; se ejecutará sin clave."
+            mvn -B dependency-check:check
+          fi
+
+      - name: Guardar reporte de vulnerabilidades
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: java-dependency-check-report
+          path: java-service/target/dependency-check-report.html
+          if-no-files-found: ignore
+
+  integration-tests:
+    name: Pruebas de integración Java con PostgreSQL
+    runs-on: ubuntu-latest
+    needs: quality-security-and-unit-tests
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+
+        env:
+          POSTGRES_DB: analyticore_test
+          POSTGRES_USER: analyticore
+          POSTGRES_PASSWORD: analyticore
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U analyticore -d analyticore_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: jdbc:postgresql://localhost:5432/analyticore_test
+      DATABASE_USERNAME: analyticore
+      DATABASE_PASSWORD: analyticore
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+
+    defaults:
+      run:
+        working-directory: java-service
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: java-service/pom.xml
+
+      - name: Instalar cliente PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Inicializar base de datos
+        env:
+          PGPASSWORD: analyticore
+        run: |
+          psql \
+            --host=localhost \
+            --port=5432 \
+            --username=analyticore \
+            --dbname=analyticore_test \
+            --set=ON_ERROR_STOP=1 \
+            --file=../database/init.sql
+
+      - name: Ejecutar pruebas de integración
+        run: mvn -B test -Dtest='*IntegrationTest'
