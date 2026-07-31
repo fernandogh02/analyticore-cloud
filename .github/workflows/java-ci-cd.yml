@@ -18,6 +18,12 @@ on:
       - ".github/workflows/java-ci-cd.yml"
 
   workflow_dispatch:
+    inputs:
+      deploy_production:
+        description: "Desplegar Java a producción"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,7 +34,7 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/analyticore-java
 
 concurrency:
-  group: java-ci-${{ github.ref }}
+  group: java-ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -362,4 +368,126 @@ jobs:
           done
 
           echo "::error::La conexión de Java con PostgreSQL staging falló."
+          exit 1
+
+  deploy-production:
+    name: Desplegar y verificar Java en producción
+    runs-on: ubuntu-latest
+    needs: docker-build-scan-and-publish
+    timeout-minutes: 20
+
+    environment:
+      name: production
+      url: ${{ vars.JAVA_PRODUCTION_URL }}
+
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.deploy_production == true
+
+    steps:
+      - name: Validar configuración de producción
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_JAVA_PRODUCTION_DEPLOY_HOOK }}
+          JAVA_URL: ${{ vars.JAVA_PRODUCTION_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::No está configurado RENDER_JAVA_PRODUCTION_DEPLOY_HOOK."
+            exit 1
+          fi
+
+          if [ -z "$JAVA_URL" ]; then
+            echo "::error::No está configurado JAVA_PRODUCTION_URL."
+            exit 1
+          fi
+
+          echo "Configuración de Java production disponible."
+
+      - name: Solicitar despliegue en Render Production
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_JAVA_PRODUCTION_DEPLOY_HOOK }}
+        run: |
+          separator="?"
+
+          if [[ "$DEPLOY_HOOK" == *"?"* ]]; then
+            separator="&"
+          fi
+
+          curl \
+            --fail \
+            --show-error \
+            --silent \
+            --request POST \
+            "${DEPLOY_HOOK}${separator}ref=${GITHUB_SHA}"
+
+          echo
+          echo "Render aceptó el despliegue de Java a producción del commit ${GITHUB_SHA}."
+
+      - name: Esperar inicio del despliegue
+        run: sleep 60
+
+      - name: Verificar salud de Java en producción
+        shell: bash
+        env:
+          JAVA_URL: ${{ vars.JAVA_PRODUCTION_URL }}
+        run: |
+          for attempt in {1..30}; do
+            echo "Verificación $attempt de 30 para Java production."
+
+            status_code="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/java-production-health.json \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "${JAVA_URL}/health" || true
+            )"
+
+            if [ "$status_code" = "200" ]; then
+              echo "Java de producción disponible con HTTP 200."
+              cat /tmp/java-production-health.json
+              echo
+              exit 0
+            fi
+
+            echo "Respuesta actual: HTTP ${status_code:-sin respuesta}."
+            sleep 15
+          done
+
+          echo "::error::Java de producción no respondió correctamente."
+          exit 1
+
+      - name: Verificar conexión de Java con PostgreSQL en producción
+        shell: bash
+        env:
+          JAVA_URL: ${{ vars.JAVA_PRODUCTION_URL }}
+        run: |
+          for attempt in {1..20}; do
+            echo "Verificación $attempt de 20 para PostgreSQL production."
+
+            status_code="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/java-production-database.json \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "${JAVA_URL}/health/database" || true
+            )"
+
+            if [ "$status_code" = "200" ]; then
+              echo "Java se conectó correctamente con PostgreSQL de producción."
+              cat /tmp/java-production-database.json
+              echo
+              exit 0
+            fi
+
+            echo "Respuesta actual: HTTP ${status_code:-sin respuesta}."
+            sleep 15
+          done
+
+          echo "::error::La conexión de Java con PostgreSQL de producción falló."
           exit 1
