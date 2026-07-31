@@ -31,6 +31,13 @@ jobs:
     name: Calidad y pruebas unitarias de Python
     runs-on: ubuntu-latest
 
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://analyticore:analyticore@localhost:5432/analyticore_test
+      JAVA_SERVICE_URL: http://localhost:8080
+      JAVA_REQUEST_TIMEOUT_SECONDS: "5"
+      ALLOWED_ORIGINS: http://localhost:5173
+
     defaults:
       run:
         working-directory: python-service
@@ -62,7 +69,7 @@ jobs:
         run: python -m pip_audit -r requirements.txt
 
       - name: Ejecutar pruebas unitarias
-        run: python -m pytest -m "not integration"
+        run: python -m pytest --ignore=tests/integration
 
   integration-tests:
     name: Pruebas de integración con PostgreSQL
@@ -133,4 +140,4 @@ jobs:
             --file=../database/init.sql
 
       - name: Ejecutar pruebas de integración
-        run: python -m pytest -m integration
+        run: python -m pytest tests/integration -m integration
