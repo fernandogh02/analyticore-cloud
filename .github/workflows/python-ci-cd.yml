@@ -163,14 +163,31 @@ jobs:
           file: ./python-service/Dockerfile
           push: false
           load: true
+          pull: true
+          provenance: false
+          sbom: false
           tags: analyticore-python:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Extraer sistema de archivos de la imagen
+        shell: bash
+        run: |
+          container_id="$(docker create analyticore-python:${{ github.sha }})"
+
+          mkdir -p python-rootfs
+
+          docker export "$container_id" |
+            tar -x -C python-rootfs
+
+          docker rm "$container_id"
+
       - name: Analizar imagen con Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: analyticore-python:${{ github.sha }}
+          scan-type: rootfs
+          scan-ref: ./python-rootfs
+          scanners: vuln
           format: table
           exit-code: "1"
           ignore-unfixed: true
