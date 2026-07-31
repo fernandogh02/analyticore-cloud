@@ -21,6 +21,11 @@ on:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/analyticore-java
 
 concurrency:
   group: java-ci-${{ github.ref }}
@@ -181,8 +186,8 @@ jobs:
       - name: Ejecutar pruebas de integración
         run: mvn -B test -Dtest='*IntegrationTest'
 
-  docker-build-and-scan:
-    name: Construcción y seguridad de imagen Java
+  docker-build-scan-and-publish:
+    name: Construcción, seguridad y publicación de Java
     runs-on: ubuntu-latest
     needs:
       - quality-security-and-unit-tests
@@ -205,7 +210,10 @@ jobs:
           pull: true
           provenance: false
           sbom: false
-          tags: analyticore-java:${{ github.sha }}
+          tags: |
+            analyticore-java:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -219,3 +227,22 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+
+      - name: Iniciar sesión en GHCR
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar imagen versionada en GHCR
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          docker push "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker push "${REGISTRY}/${IMAGE_NAME}:staging"
