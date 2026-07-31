@@ -16,6 +16,12 @@ on:
       - ".github/workflows/frontend-ci-cd.yml"
 
   workflow_dispatch:
+    inputs:
+      deploy_production:
+        description: "Desplegar frontend a producción"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,7 +32,7 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/analyticore-frontend
 
 concurrency:
-  group: frontend-ci-${{ github.ref }}
+  group: frontend-ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -128,6 +134,7 @@ jobs:
     name: Desplegar y verificar frontend en staging
     runs-on: ubuntu-latest
     needs: docker-build-scan-and-publish
+    timeout-minutes: 20
 
     if: >-
       github.event_name == 'push' &&
@@ -205,4 +212,93 @@ jobs:
           done
 
           echo "::error::El frontend staging no respondió correctamente."
+          exit 1
+
+  deploy-production:
+    name: Desplegar y verificar frontend en producción
+    runs-on: ubuntu-latest
+    needs: docker-build-scan-and-publish
+    timeout-minutes: 20
+
+    environment:
+      name: production
+      url: ${{ vars.FRONTEND_PRODUCTION_URL }}
+
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.deploy_production == true
+
+    steps:
+      - name: Validar configuración de producción
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_FRONTEND_PRODUCTION_DEPLOY_HOOK }}
+          FRONTEND_URL: ${{ vars.FRONTEND_PRODUCTION_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::No está configurado RENDER_FRONTEND_PRODUCTION_DEPLOY_HOOK."
+            exit 1
+          fi
+
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "::error::No está configurado FRONTEND_PRODUCTION_URL."
+            exit 1
+          fi
+
+          echo "Configuración de producción disponible."
+
+      - name: Solicitar despliegue en Render Production
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_FRONTEND_PRODUCTION_DEPLOY_HOOK }}
+        run: |
+          separator="?"
+
+          if [[ "$DEPLOY_HOOK" == *"?"* ]]; then
+            separator="&"
+          fi
+
+          curl \
+            --fail \
+            --show-error \
+            --silent \
+            --request POST \
+            "${DEPLOY_HOOK}${separator}ref=${GITHUB_SHA}"
+
+          echo
+          echo "Render aceptó el despliegue a producción del commit ${GITHUB_SHA}."
+
+      - name: Esperar inicio del despliegue
+        run: sleep 60
+
+      - name: Verificar frontend en producción
+        shell: bash
+        env:
+          FRONTEND_URL: ${{ vars.FRONTEND_PRODUCTION_URL }}
+        run: |
+          for attempt in {1..20}; do
+            echo "Verificación $attempt de 20 para producción."
+
+            status_code="$(
+              curl \
+                --location \
+                --silent \
+                --output /tmp/frontend-production.html \
+                --write-out "%{http_code}" \
+                --max-time 30 \
+                "$FRONTEND_URL" || true
+            )"
+
+            if [ "$status_code" = "200" ] &&
+               [ -s /tmp/frontend-production.html ]; then
+              echo "Frontend de producción disponible con HTTP 200."
+              exit 0
+            fi
+
+            echo "Respuesta actual: HTTP ${status_code:-sin respuesta}."
+            sleep 15
+          done
+
+          echo "::error::El frontend de producción no respondió correctamente."
           exit 1
