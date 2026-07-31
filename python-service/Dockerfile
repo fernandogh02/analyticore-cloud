@@ -22,8 +22,21 @@ ENV PATH="/opt/venv/bin:${PATH}"
 
 COPY requirements.txt .
 
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip \
+    && python -m pip install --no-cache-dir -r requirements.txt \
+    && rm -rf \
+        /opt/venv/lib/python3.13/site-packages/pip \
+        /opt/venv/lib/python3.13/site-packages/pip-*.dist-info \
+        /opt/venv/lib/python3.13/site-packages/setuptools \
+        /opt/venv/lib/python3.13/site-packages/setuptools-*.dist-info \
+        /opt/venv/lib/python3.13/site-packages/wheel \
+        /opt/venv/lib/python3.13/site-packages/wheel-*.dist-info \
+        /opt/venv/lib/python3.13/site-packages/pkg_resources \
+        /opt/venv/lib/python3.13/ensurepip \
+    && rm -f \
+        /opt/venv/bin/pip \
+        /opt/venv/bin/pip3 \
+        /opt/venv/bin/pip3.13
 
 
 # ------------------------------------------------
@@ -40,7 +53,20 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf \
+        /usr/local/lib/python3.13/site-packages/pip \
+        /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
+        /usr/local/lib/python3.13/site-packages/setuptools \
+        /usr/local/lib/python3.13/site-packages/setuptools-*.dist-info \
+        /usr/local/lib/python3.13/site-packages/wheel \
+        /usr/local/lib/python3.13/site-packages/wheel-*.dist-info \
+        /usr/local/lib/python3.13/site-packages/pkg_resources \
+        /usr/local/lib/python3.13/ensurepip \
+    && rm -f \
+        /usr/local/bin/pip \
+        /usr/local/bin/pip3 \
+        /usr/local/bin/pip3.13
 
 RUN useradd \
     --create-home \
