@@ -1,11 +1,12 @@
 package com.analyticore.analysis.infrastructure.database.adapter;
 
 import com.analyticore.analysis.application.port.out.DatabaseHealthPort;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Comprueba la conexión y la tabla mediante PostgreSQL.
+ * Comprueba la conexión y la existencia de la tabla en PostgreSQL.
  */
 @Component
 public class PostgreSqlDatabaseHealthAdapter
@@ -13,6 +14,18 @@ public class PostgreSqlDatabaseHealthAdapter
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * Crea el adaptador utilizando el JdbcTemplate administrado por Spring.
+     *
+     * @param jdbcTemplate componente utilizado para ejecutar consultas SQL
+     */
+    @SuppressFBWarnings(
+        value = "EI_EXPOSE_REP2",
+        justification = """
+            JdbcTemplate es una dependencia administrada por Spring
+            y se conserva intencionalmente mediante inyección por constructor.
+            """
+    )
     public PostgreSqlDatabaseHealthAdapter(
         JdbcTemplate jdbcTemplate
     ) {

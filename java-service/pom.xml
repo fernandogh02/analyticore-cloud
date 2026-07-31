@@ -26,17 +26,33 @@
 
     <properties>
         <java.version>21</java.version>
+        
+        <postgresql.version>42.7.13</postgresql.version>
+        <tomcat.version>11.0.24</tomcat.version>
+        <log4j2.version>2.25.5</log4j2.version>
+
         <project.build.sourceEncoding>
             UTF-8
         </project.build.sourceEncoding>
+
         <project.reporting.outputEncoding>
             UTF-8
         </project.reporting.outputEncoding>
+
+        <spotbugs.version>4.10.3</spotbugs.version>
+        <spotbugs.maven.plugin.version>
+            4.10.3.0
+        </spotbugs.maven.plugin.version>
+
+        <dependency.check.maven.version>
+            12.2.2
+        </dependency.check.maven.version>
+
     </properties>
 
     <dependencies>
 
-        <!-- Creación de API REST con Spring MVC -->
+        <!-- Creación de la API REST con Spring MVC -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>
@@ -52,25 +68,37 @@
             </artifactId>
         </dependency>
 
-        <!-- Persistencia mediante Jakarta Persistence y Spring Data -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-jpa</artifactId>
-</dependency>
+        <!-- Persistencia mediante JPA y Spring Data -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>
+                spring-boot-starter-data-jpa
+            </artifactId>
+        </dependency>
 
-<!-- Controlador JDBC oficial de PostgreSQL -->
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <scope>runtime</scope>
-</dependency>
+        <!-- Controlador JDBC oficial de PostgreSQL -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
-<!-- Base en memoria para pruebas sin PostgreSQL -->
-<dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <scope>test</scope>
-</dependency>
+        <!-- Base de datos en memoria para pruebas -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Anotaciones para supresiones justificadas de SpotBugs -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>
+                spotbugs-annotations
+            </artifactId>
+            <version>${spotbugs.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Pruebas automáticas -->
         <dependency>
@@ -85,12 +113,50 @@
 
     <build>
         <plugins>
+
+            <!-- Empaquetado y ejecución de Spring Boot -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>
                     spring-boot-maven-plugin
                 </artifactId>
             </plugin>
+
+            <!-- Análisis estático del código Java -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>
+                    spotbugs-maven-plugin
+                </artifactId>
+                <version>
+                    ${spotbugs.maven.plugin.version}
+                </version>
+
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Medium</threshold>
+                    <failOnError>true</failOnError>
+                    <xmlOutput>true</xmlOutput>
+                </configuration>
+            </plugin>
+
+            <!-- Análisis de vulnerabilidades -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>
+                    dependency-check-maven
+                </artifactId>
+                <version>
+                    ${dependency.check.maven.version}
+                </version>
+
+                <configuration>
+                    <failBuildOnCVSS>
+                        7.0
+                    </failBuildOnCVSS>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
