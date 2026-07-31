@@ -21,6 +21,11 @@ on:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/analyticore-python
 
 concurrency:
   group: python-ci-${{ github.ref }}
@@ -142,8 +147,8 @@ jobs:
       - name: Ejecutar pruebas de integración
         run: python -m pytest tests/integration -m integration
 
-  docker-build-and-scan:
-    name: Construcción y seguridad de imagen Python
+  docker-build-scan-and-publish:
+    name: Construcción, seguridad y publicación de Python
     runs-on: ubuntu-latest
     needs:
       - quality-and-unit-tests
@@ -166,7 +171,10 @@ jobs:
           pull: true
           provenance: false
           sbom: false
-          tags: analyticore-python:${{ github.sha }}
+          tags: |
+            analyticore-python:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -193,3 +201,22 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+
+      - name: Iniciar sesión en GHCR
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar imagen versionada en GHCR
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          docker push "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker push "${REGISTRY}/${IMAGE_NAME}:staging"
