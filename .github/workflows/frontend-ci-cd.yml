@@ -19,6 +19,11 @@ on:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/analyticore-frontend
 
 concurrency:
   group: frontend-ci-${{ github.ref }}
@@ -59,8 +64,8 @@ jobs:
       - name: Compilar aplicación
         run: npm run build
 
-  docker-build-and-scan:
-    name: Construcción y seguridad de imagen frontend
+  docker-build-scan-and-publish:
+    name: Construcción, seguridad y publicación del frontend
     runs-on: ubuntu-latest
     needs: quality-and-tests
 
@@ -78,9 +83,15 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           load: true
-          tags: analyticore-frontend:${{ github.sha }}
+          pull: true
+          provenance: false
+          sbom: false
+          tags: |
+            analyticore-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
           build-args: |
-            VITE_API_BASE_URL=http://localhost:8000
+            VITE_API_BASE_URL=${{ vars.FRONTEND_STAGING_API_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -94,3 +105,20 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
 
+      - name: Iniciar sesión en GHCR
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar imagen versionada en GHCR
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        run: |
+          docker push "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker push "${REGISTRY}/${IMAGE_NAME}:staging"
