@@ -85,7 +85,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Analizar imagen con Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: analyticore-frontend:${{ github.sha }}
           format: table
@@ -93,3 +93,4 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+
