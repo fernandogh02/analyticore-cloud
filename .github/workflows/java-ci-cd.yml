@@ -30,6 +30,7 @@ jobs:
   quality-security-and-unit-tests:
     name: Calidad, seguridad y pruebas unitarias Java
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
@@ -56,15 +57,56 @@ jobs:
       - name: Ejecutar SpotBugs
         run: mvn -B spotbugs:check
 
+      - name: Obtener fecha para caché OWASP
+        id: owasp-cache-date
+        run: echo "date=$(date -u +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Restaurar caché de Dependency-Check
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-${{ steps.owasp-cache-date.outputs.date }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-
+
+      - name: Verificar clave NVD
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::error::El secreto NVD_API_KEY no está configurado."
+            exit 1
+          fi
+
+          echo "La clave NVD está disponible y protegida."
+
+      - name: Actualizar base de vulnerabilidades
+        run: |
+          for attempt in 1 2 3; do
+            echo "Intento $attempt de 3 para actualizar la base NVD."
+
+            if mvn -B dependency-check:update-only \
+              -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
+              -DnvdApiDelay=5000 \
+              -DnvdMaxRetryCount=20 \
+              -DnvdValidForHours=24; then
+              echo "Base NVD actualizada correctamente."
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::No fue posible actualizar la base NVD después de 3 intentos."
+              exit 1
+            fi
+
+            wait_seconds=$((attempt * 60))
+            echo "NVD no respondió. Nuevo intento en $wait_seconds segundos."
+            sleep "$wait_seconds"
+          done
+
       - name: Analizar vulnerabilidades
         run: |
-          if [ -n "$NVD_API_KEY" ]; then
-            mvn -B dependency-check:check \
-              -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
-          else
-            echo "NVD_API_KEY no configurada; se ejecutará sin clave."
-            mvn -B dependency-check:check
-          fi
+          mvn -B dependency-check:check \
+            -DautoUpdate=false \
+            -DossIndexAnalyzerEnabled=false
 
       - name: Guardar reporte de vulnerabilidades
         if: always()
@@ -138,4 +180,3 @@ jobs:
 
       - name: Ejecutar pruebas de integración
         run: mvn -B test -Dtest='*IntegrationTest'
-
